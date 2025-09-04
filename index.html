@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>AutoFuelShield - Source Code C++</title>
+  <meta name="description" content="AutoFuelShield - Pressure-triggered fuel emulsification system: C++ source code." />
+  <style>
+    :root{
+      --bg:#0b0f14; --card:#121821; --text:#e6edf3; --muted:#9fb0c0; --accent:#4aa3ff; --border:#1f2a37;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: Inter, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      background:linear-gradient(180deg,#0b0f14 0%,#0d131b 100%);
+      color:var(--text);
+      font-family:var(--sans);
+      line-height:1.5;
+      padding:24px;
+    }
+    .wrap{
+      max-width:1000px;
+      margin:0 auto;
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:18px;
+      padding:28px;
+      box-shadow:0 10px 30px rgba(0,0,0,.35);
+    }
+    header{display:flex; flex-wrap:wrap; gap:16px; align-items:center; justify-content:space-between}
+    h1{font-size:clamp(20px,3vw,28px); margin:0; letter-spacing:.2px}
+    .subtitle{color:var(--muted); font-size:14px}
+    .actions{display:flex; gap:8px}
+    button{
+      background:transparent; color:var(--text); border:1px solid var(--border); padding:10px 14px;
+      border-radius:10px; cursor:pointer; font-weight:600; transition:.2s ease;
+    }
+    button:hover{border-color:var(--accent); color:var(--accent)}
+    pre{
+      margin-top:18px;
+      background:#0a0f14;
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:18px;
+      overflow:auto;
+      font-family:var(--mono);
+      font-size:14px;
+      line-height:1.45;
+    }
+    code{font-family:var(--mono)}
+    footer{margin-top:14px; color:var(--muted); font-size:12px}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <header>
+      <div>
+        <h1>AutoFuelShield — Source Code C++</h1>
+        <div class="subtitle">Arduino sketch for impact-triggered emulsification (servos + AFMotor DC motor)</div>
+      </div>
+      <div class="actions">
+        <button id="copyBtn" aria-label="Copy source code">Copy code</button>
+      </div>
+    </header>
+
+    <pre><code id="src">
+// AutoFuelShield - Source Code C++
+
+#include &lt;Servo.h&gt;
+#include &lt;AFMotor.h&gt;
+
+#define COLLISION_PIN A0
+
+Servo servo1;
+Servo servo2;
+AF_DCMotor motor(4);
+bool wasPressed = false;
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(COLLISION_PIN, INPUT);
+  motor.setSpeed(225);
+  motor.run(RELEASE);
+
+  Serial.println("System Ready. Waiting for pressure input...");
+}
+
+void loop() {
+  int sensorState = digitalRead(COLLISION_PIN);
+
+  if (sensorState == HIGH &amp;&amp; !wasPressed) {
+    wasPressed = true;
+    Serial.println("Pressure detected!");
+    Serial.println("Sweeping servos (engaging water, oil and emulsifier)...");
+
+    servo1.attach(9);
+    servo2.attach(10);
+    for (int pos = 0; pos &lt;= 180; pos++) {
+      servo1.write(pos);
+      servo2.write(pos);
+      delay(15);
+    }
+    servo1.detach();
+    servo2.detach();
+    Serial.println("Servo sweep complete.");
+
+    Serial.println("Motor starting for 80 seconds...");
+    motor.run(FORWARD);
+    delay(60000);   // NOTE: comment says 80s, code runs 60s. Adjust if needed.
+    motor.run(RELEASE);
+    Serial.println("Motor stopped.");
+    Serial.println("System idle. Waiting for next pressure input...");
+  }
+
+  if (sensorState == LOW &amp;&amp; wasPressed) {
+    wasPressed = false;
+    Serial.println("Pressure released. Ready for next trigger.");
+  }
+}
+    </code></pre>
+  </main>
+
+  <script>
+    (function(){
+      const codeEl = document.getElementById("src");
+      const copyBtn = document.getElementById("copyBtn");
+      const raw = codeEl.textContent.replace(/\r?\n$/, "");
+
+      copyBtn.addEventListener("click", async () => {
+        try {
+          await navigator.clipboard.writeText(raw);
+          copyBtn.textContent = "Copied!";
+          setTimeout(() => copyBtn.textContent = "Copy code", 1400);
+        } catch (e) {
+          copyBtn.textContent = "Copy failed";
+          setTimeout(() => copyBtn.textContent = "Copy code", 1400);
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
