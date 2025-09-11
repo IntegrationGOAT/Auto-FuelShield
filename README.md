@@ -4,11 +4,11 @@ The system works by detecting collision-induced pressure using a sensor, which s
 
 Key highlights of AutoFuelShield include:
 
-  Automatic prevention before fire breaks out in the fuel tank.
+      Automatic prevention before fire breaks out in the fuel tank.
 
-  Low-cost (~₹1000) and compact design, utilising simple electronics.
+      Low-cost (~₹1000) and compact design, utilising simple electronics.
 
-  Life-saving impact, especially in the golden seconds after a crash.
+      Life-saving impact, especially in the golden seconds after a crash.
 
 Potential for scalability with flame sensors, GSM alerts, IoT, and AI integration.
 
