@@ -3,13 +3,13 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>AutoFuelShield - Source Code C++</title>
-  <meta name="description" content="AutoFuelShield - Pressure-triggered fuel emulsification system: C++ source code." />
+  <title>SafeNex - Arduino + NodeMCU (Source Code)</title>
+  <meta name="description" content="Static viewer: Arduino & NodeMCU source code (no functionality)" />
   <style>
     :root{
-      --bg:#0b0f14; --card:#121821; --text:#e6edf3; --muted:#9fb0c0; --accent:#4aa3ff; --border:#1f2a37;
+      --bg:#0b0f14; --card:#121821; --text:#e6edf3; --muted:#9fb0c0; --border:#1f2a37;
       --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      --sans: Inter, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+      --sans: Inter, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans";
     }
     *{box-sizing:border-box}
     html,body{height:100%}
@@ -26,120 +26,233 @@
       margin:0 auto;
       background:var(--card);
       border:1px solid var(--border);
-      border-radius:18px;
-      padding:28px;
+      border-radius:12px;
+      padding:20px;
       box-shadow:0 10px 30px rgba(0,0,0,.35);
     }
-    header{display:flex; flex-wrap:wrap; gap:16px; align-items:center; justify-content:space-between}
-    h1{font-size:clamp(20px,3vw,28px); margin:0; letter-spacing:.2px}
-    .subtitle{color:var(--muted); font-size:14px}
-    .actions{display:flex; gap:8px}
-    button{
-      background:transparent; color:var(--text); border:1px solid var(--border); padding:10px 14px;
-      border-radius:10px; cursor:pointer; font-weight:600; transition:.2s ease;
-    }
-    button:hover{border-color:var(--accent); color:var(--accent)}
+    header{display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between}
+    h1{font-size:clamp(18px,3vw,26px); margin:0}
+    .subtitle{color:var(--muted); font-size:13px}
+    h2{margin-top:22px; margin-bottom:8px; font-size:16px}
     pre{
-      margin-top:18px;
-      background:#0a0f14;
+      background:#07111a;
       border:1px solid var(--border);
-      border-radius:14px;
-      padding:18px;
+      border-radius:10px;
+      padding:16px;
       overflow:auto;
       font-family:var(--mono);
-      font-size:14px;
+      font-size:13px;
       line-height:1.45;
+      color:var(--text);
+      white-space:pre-wrap;
     }
-    code{font-family:var(--mono)}
     footer{margin-top:14px; color:var(--muted); font-size:12px}
+    /* ensure code text looks monospace */
+    code{font-family:var(--mono)}
   </style>
 </head>
 <body>
   <main class="wrap">
     <header>
       <div>
-        <h1>AutoFuelShield — Source Code C++</h1>
-        <div class="subtitle">Arduino sketch for impact-triggered emulsification (servos + AFMotor DC motor)</div>
-      </div>
-      <div class="actions">
-        <button id="copyBtn" aria-label="Copy source code">Copy code</button>
+        <h1>SafeNex - Arduino + NodeMCU (Source Code)</h1>
+        <div class="subtitle">Language - C++</div>
       </div>
     </header>
 
-    <pre><code id="src">
-// AutoFuelShield - Source Code C++
-
-#include &lt;Servo.h&gt;
+    <h2>Arduino Code</h2>
+    <pre><code>
 #include &lt;AFMotor.h&gt;
+#include &lt;Servo.h&gt;
 
-#define COLLISION_PIN A0
-
+AF_DCMotor motor1(1);  // Motor connected to M1
+AF_DCMotor motor2(2);  // Motor connected to M2
 Servo servo1;
-Servo servo2;
-AF_DCMotor motor(4);
-bool wasPressed = false;
+
+#define FLAME_PIN 24
+#define BUZZER_PIN 22
 
 void setup() {
   Serial.begin(9600);
-  pinMode(COLLISION_PIN, INPUT);
-  motor.setSpeed(225);
-  motor.run(RELEASE);
 
-  Serial.println("System Ready. Waiting for pressure input...");
+  pinMode(FLAME_PIN, INPUT);
+  pinMode(BUZZER_PIN, OUTPUT);
+
+  servo1.attach(10); // S1 on Adafruit shield = pin 10
+  servo1.write(90);  // start position
+
+  Serial.println("System Ready!");
 }
 
 void loop() {
-  int sensorState = digitalRead(COLLISION_PIN);
+  int flameDetected = digitalRead(FLAME_PIN);
 
-  if (sensorState == HIGH &amp;&amp; !wasPressed) {
-    wasPressed = true;
-    Serial.println("Pressure detected!");
-    Serial.println("Sweeping servos (engaging water, oil and emulsifier)...");
+  if (flameDetected == LOW) { // LOW = Flame detected (for most sensors)
+    Serial.println("Flame Detected!");
 
-    servo1.attach(9);
-    servo2.attach(10);
-    for (int pos = 0; pos &lt;= 180; pos++) {
-      servo1.write(pos);
-      servo2.write(pos);
-      delay(15);
+    digitalWrite(BUZZER_PIN, HIGH);
+
+    // Start both motors
+    motor1.setSpeed(255);
+    motor2.setSpeed(255);
+    motor1.run(FORWARD);
+    motor2.run(FORWARD);
+
+    unsigned long startTime = millis();
+
+    while (millis() - startTime &lt; 10000) { // run for 10 seconds
+      // Servo sweep
+      for (int angle = 90; angle &lt;= 180; angle += 5) {
+        servo1.write(angle);
+        delay(50);
+      }
+      for (int angle = 180; angle &gt;= 90; angle -= 5) {
+        servo1.write(angle);
+        delay(50);
+      }
     }
-    servo1.detach();
-    servo2.detach();
-    Serial.println("Servo sweep complete.");
 
-    Serial.println("Motor starting for 80 seconds...");
-    motor.run(FORWARD);
-    delay(60000);   // NOTE: comment says 80s, code runs 60s. Adjust if needed.
-    motor.run(RELEASE);
-    Serial.println("Motor stopped.");
-    Serial.println("System idle. Waiting for next pressure input...");
+    // Stop everything
+    motor1.run(RELEASE);
+    motor2.run(RELEASE);
+    digitalWrite(BUZZER_PIN, LOW);
+    servo1.write(90);
+
+    Serial.println(" Task Completed.");
+    delay(2000); // short cooldown
+  } 
+  else {
+    // Normal state
+    digitalWrite(BUZZER_PIN, LOW);
+    motor1.run(RELEASE);
+    motor2.run(RELEASE);
+    servo1.write(90);
   }
 
-  if (sensorState == LOW &amp;&amp; wasPressed) {
-    wasPressed = false;
-    Serial.println("Pressure released. Ready for next trigger.");
+  delay(200);
+}
+    </code></pre>
+
+    <h2>NodeMCU Code (ESP8266)</h2>
+    <pre><code>
+#include &lt;ESP8266WiFi.h&gt;
+#include &lt;ESP8266WebServer.h&gt;
+#include &lt;ESP8266HTTPClient.h&gt;
+#include &lt;ArduinoJson.h&gt;
+
+const char* ssid = "Your wifi ssid"; 
+const char* password = "Your wifi password"; 
+
+ESP8266WebServer server(80);
+
+const int flamePin = D1;
+
+String city = "";
+String regionName = "";
+String country = "";
+String latitude = "";
+String longitude = "";
+
+bool locationFetched = false;   // ensures it runs only once
+
+void fetchLocation() {
+  if (WiFi.status() != WL_CONNECTED || locationFetched) return;
+
+  WiFiClient client;
+  HTTPClient http;
+
+  http.begin(client, "http://ip-api.com/json/");
+  int httpCode = http.GET();
+
+  if (httpCode == 200) {
+    String payload = http.getString();
+
+    DynamicJsonDocument doc(1024);
+    deserializeJson(doc, payload);
+
+    city = doc["city"].as&lt;String&gt;();
+    regionName = doc["regionName"].as&lt;String&gt;();
+    country = doc["country"].as&lt;String&gt;();
+    latitude = doc["lat"].as&lt;String&gt;();
+    longitude = doc["lon"].as&lt;String&gt;();
+
+    Serial.println("Location fetched successfully!");
+  } else {
+    Serial.println("HTTP Error: " + String(httpCode));
   }
+
+  http.end();
+  locationFetched = true;
+}
+
+void handleRoot() {
+  int flameStatus = digitalRead(flamePin);
+
+  String html = "&lt;html&gt;&lt;head&gt;&lt;title&gt;Flame Sensor&lt;/title&gt;&lt;/head&gt;";
+
+  // Background color
+  if (flameStatus == LOW) {
+    html += "&lt;body style='background-color: red; color: white;'&gt;";
+  } else {
+    html += "&lt;body style='background-color: green; color: white;'&gt;";
+  }
+
+  html += "&lt;h1&gt;Flame Sensor Web Server&lt;/h1&gt;";
+
+  if (flameStatus == LOW) {
+    html += "&lt;h2&gt;Flame Detected!&lt;/h2&gt;";
+
+    // SOUND ALERT (rendered by client when served from NodeMCU — this page only shows the code)
+    html += "&lt;audio autoplay&gt;";
+    html += "&lt;source src='http://soundbible.com/mp3/service-bell_daniel_simion.mp3' type='audio/mpeg'&gt;";
+    html += "&lt;/audio&gt;";
+
+    // LOCATION BOX
+    html += "&lt;div style='padding:20px; background:white; color:black; border-radius:10px; width:300px;'&gt;";
+    html += "&lt;h3&gt;Location Details&lt;/h3&gt;";
+    html += "City: " + city + "&lt;br&gt;";
+    html += "Region: " + regionName + "&lt;br&gt;";
+    html += "Country: " + country + "&lt;br&gt;";
+    html += "Latitude: " + latitude + "&lt;br&gt;";
+    html += "Longitude: " + longitude + "&lt;br&gt;";
+    html += "&lt;/div&gt;";
+
+  } else {
+    html += "&lt;h2&gt;No Flame Detected.&lt;/h2&gt;";
+  }
+
+  html += "&lt;meta http-equiv='refresh' content='2'&gt;";
+  html += "&lt;/body&gt;&lt;/html&gt;";
+
+  server.send(200, "text/html", html);
+}
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(flamePin, INPUT);
+
+  WiFi.begin(ssid, password);
+  Serial.print("Connecting to WiFi...");
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+
+  Serial.println("\nConnected!");
+  Serial.print("IP Address: ");
+  Serial.println(WiFi.localIP());
+
+  fetchLocation();  // Get location ONCE at startup
+
+  server.on("/", handleRoot);
+  server.begin();
+  Serial.println("Web server started!");
+}
+
+void loop() {
+  server.handleClient();
 }
     </code></pre>
   </main>
-
-  <script>
-    (function(){
-      const codeEl = document.getElementById("src");
-      const copyBtn = document.getElementById("copyBtn");
-      const raw = codeEl.textContent.replace(/\r?\n$/, "");
-
-      copyBtn.addEventListener("click", async () => {
-        try {
-          await navigator.clipboard.writeText(raw);
-          copyBtn.textContent = "Copied!";
-          setTimeout(() => copyBtn.textContent = "Copy code", 1400);
-        } catch (e) {
-          copyBtn.textContent = "Copy failed";
-          setTimeout(() => copyBtn.textContent = "Copy code", 1400);
-        }
-      });
-    })();
-  </script>
 </body>
 </html>
